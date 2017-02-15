@@ -5,60 +5,16 @@
 
 ## Project: Build a Traffic Sign Recognition Classifier
 
-In this notebook, a template is provided for you to implement your functionality in stages which is required to successfully complete this project. If additional code is required that cannot be included in the notebook, be sure that the Python code is successfully imported and included in your submission, if necessary. Sections that begin with **'Implementation'** in the header indicate where you should begin your implementation for your project. Note that some sections of implementation are optional, and will be marked with **'Optional'** in the header.
-
-In addition to implementing code, there will be questions that you must answer which relate to the project and your implementation. Each section where you will answer a question is preceded by a **'Question'** header. Carefully read each question and provide thorough answers in the following text boxes that begin with **'Answer:'**. Your project submission will be evaluated based on your answers to each of the questions and the implementation you provide.
-
->**Note:** Code and Markdown cells can be executed using the **Shift + Enter** keyboard shortcut. In addition, Markdown cells can be edited by typically double-clicking the cell to enter edit mode.
-
-
-```python
-import numpy as np
-import scipy as sp
-import tensorflow as tf
-import matplotlib.image as mpimg
-import sklearn.preprocessing as pp
-import random
-import cv2
-import matplotlib.pyplot as plt
-import csv
-from PIL import Image, ImageOps
-from ipywidgets import interact, fixed
-%matplotlib inline 
-```
-
----
-## Step 0: Load The Data
-
-
-```python
-import pickle
-
-training_file = './train.p'
-testing_file = './test.p'
-
-with open(training_file, mode='rb') as f:
-    train = pickle.load(f)
-with open(testing_file, mode='rb') as f:
-    test = pickle.load(f)
-    
-X_train, y_train = train['features'], train['labels']
-X_test, y_test = test['features'], test['labels']
-```
-
----
-
 ## Step 1: Dataset Summary & Exploration
 
-The pickled data is a dictionary with 4 key/value pairs:
+The dataset used: [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).
+
+The csv file from the dataset contains a dictionary with 4 key/value pairs:
 
 - `'features'` is a 4D array containing raw pixel data of the traffic sign images, (num examples, width, height, channels).
 - `'labels'` is a 2D array containing the label/class id of the traffic sign. The file `signnames.csv` contains id -> name mappings for each id.
 - `'sizes'` is a list containing tuples, (width, height) representing the the original width and height the image.
-- `'coords'` is a list containing tuples, (x1, y1, x2, y2) representing coordinates of a bounding box around the sign in the image. **THESE COORDINATES ASSUME THE ORIGINAL IMAGE. THE PICKLED DATA CONTAINS RESIZED VERSIONS (32 by 32) OF THESE IMAGES**
-
-Complete the basic data summary below.
-
+- `'coords'` is a list containing tuples, (x1, y1, x2, y2) representing coordinates of a bounding box around the sign in the image. 
 
 ```python
 # Number of training examples
@@ -85,19 +41,11 @@ print("Number of classes =", n_classes)
     Number of classes = 43
 
 
-Visualize the German Traffic Signs Dataset using the pickled file(s). This is open ended, suggestions include: plotting traffic sign images, plotting the count of each sign, etc.
+We see that the dataset is a list of images (traffic signs), with a list of their actual labels, represented as an integer.  We can convert these integers to descriptions using the signnames.csv file.
 
-The [Matplotlib](http://matplotlib.org/) [examples](http://matplotlib.org/examples/index.html) and [gallery](http://matplotlib.org/gallery.html) pages are a great resource for doing visualizations in Python.
-
-**NOTE:** It's recommended you start with something simple first. If you wish to do more, come back to it after you've completed the rest of the sections.
-
+First, let's take a look at some of the images and what their labels look like:
 
 ```python
-""" We see that the dataset is a list of images (traffic signs), with a list of their actual labels, 
-    represented as an integer.  We can convert these integers to descriptions using the signnames.csv
-    file."""
-
-""" First, let's take a look at some of the images and what their labels look like: """
 
 sign_names = {}
 with open('signnames.csv') as csvfile:
@@ -134,25 +82,13 @@ interact(show_sign_at_index, i=(0,len(X_train)), classifications=fixed(y_train),
 
 ## Step 2: Design and Test a Model Architecture
 
-Design and implement a deep learning model that learns to recognize traffic signs. Train and test your model on the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).
-
-There are various aspects to consider when thinking about this problem:
-
-- Neural network architecture
-- Play around preprocessing techniques (normalization, rgb to grayscale, etc)
-- Number of examples per label (some have more than others).
-- Generate fake data.
-
-Here is an example of a [published baseline model on this problem](http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf). It's not required to be familiar with the approach used in the paper but, it's good practice to try to read papers like these.
-
-**NOTE:** The LeNet-5 implementation shown in the [classroom](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/601ae704-1035-4287-8b11-e2c2716217ad/concepts/d4aca031-508f-4e0b-b493-e7b706120f81) at the end of the CNN lesson is a solid starting point. You'll have to change the number of classes and possibly the preprocessing, but aside from that it's plug and play!
 
 ### Implementation
 
-Use the code cell (or multiple code cells, if necessary) to implement the first step of your project. Once you have completed your implementation and are satisfied with the results, be sure to thoroughly answer the questions that follow.
-
 ##### Preprocessing
-
+I tried multiple normalisation techniques for this project, however I ultimately settled for the most simple of all: dividing each pixel value by 255 and subtracting 0.5 to center it around zero.
+    <br>
+The reason I picked such a simple normalisation procedure is mostly for ease of use. Subtracting the mean of the image set and dividing by the standard deviation didn't make sense in this context, since it didn't provide any significant performance improvements and it creates difficulty when working with new images to classify.
 
 ```python
 def rgb_to_normalized_gray(rgb):
@@ -200,6 +136,9 @@ y_test = y_test[:7500]
 
 ##### Data Augmentation (credit: Vivek Yadav)
 
+Beyond normalisation, I also followed Dr. Vivek Yadav's guide on dataset augmentation, which helps to prevent overfitting on the small dataset provided, and helps generalise the model to many different angles. In addition to Dr. Yadav's tilting/shearing procedure, I did brightness variation, which helped to further generalise the dataset provided to many different lighting conditions.
+<br>
+My data augmentation is called from my training routine, as it allows for fine grain control over the amount of change to the dataset at different stages in the training procedure. I gradually reduce the augmented dataset as training progresses, in order to allow the model to learn the more subtle features of the dataset.
 
 ```python
 def transform_image(img,ang_range,shear_range,trans_range, reduction_coeff):
@@ -274,6 +213,10 @@ def transform_image(img,ang_range,shear_range,trans_range, reduction_coeff):
 # Architecture
 
 ### Sermanet Model (Sermanet Team, LeCun paper)
+
+**This model is based on the model proposed by Yann LeCun in his paper: http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf.**
+<br>
+I read through and tried to mimick the network proposed by Yann LeCun in the paper referenced above.  He describes a very simple 2-layer convolutional neural network submitted by the Sermanet team in the traffic sign classification competition. This conv-net consists of two convolutional layers, of size 108 each, both feeding into a single fully-connected layer of size 100.  I mimicked this approach (Sermanet model).
 
 
 ```python
@@ -381,7 +324,11 @@ with g1.as_default() as g:
 ```
 
 #### Training SermaNet
-
+For training the model, I used the well known and loved Adam Optimizer with a learning rate of 0.001, set to minimize the cross entropy between the actual labels and the predicted labels.  My training data is split into 40 batches of 980 images each. 50 epochs seems to be more than enough to train this specific model on the training data provided.
+<br><br>
+I evaluated my model using both an accuracy figure (which indicates the amount of labels predicted correctly), as well as the cross-entropy figure - which indicates to what extent the model was "sure" about the predicted label (and whether it got it right).
+<br><br>
+As mentioned before, I augmented the training dataset, and gradually reduced the augmentation as training progressed - which allows the conv-net to learn the more subtle features of the (very low resolution) images.
 
 ```python
 with tf.Session(graph = g1) as sess:
@@ -461,6 +408,7 @@ with tf.Session(graph = g1) as sess:
 
 ### Alexnet-based Model
 
+I started with a simple convolutional neural network, based on Alexnet. It consists of 3 3x3 convolution layers (of sizes 32, 64 and 128 respectively), each with an elu activation function. The convolution layers are each fed into a 3x3 max pooling layer, followed by normalisation and dropout.  The final convolutional layer is flattened into a fully connected layer, which is followed by another fully connected layer, from which we then gather the output values.  These are then converted to class predictions using a standard sigmoid function.  Overall, a standard convolutional model.
 
 ```python
 def conv2d(name, l_input, w, b):
@@ -578,7 +526,6 @@ tf.reset_default_graph()
 ```
 
 #### Training AlexNet
-
 
 ```python
 with tf.Session(graph = g2) as sess:
@@ -703,112 +650,18 @@ with tf.Session() as sess:
 
     Ensemble Test Accuracy: 95.5348908901%
 
-
-### Question 1 
-
-_Describe how you preprocessed the data. Why did you choose that technique?_
-
-**Answer:**
-
-<font color='red'>
-I tried multiple normalisation techniques for this project, however I ultimately settled for the most simple of all: dividing each pixel value by 255 and subtracting 0.5 to center it around zero.
-    <br>
-The reason I picked such a simple normalisation procedure is mostly for ease of use. Subtracting the mean of the image set and dividing by the standard deviation didn't make sense in this context, since it didn't provide any significant performance improvements and it creates difficulty when working with new images to classify.
-
-<br>
-<br>
-Beyond normalisation, I also followed Dr. Vivek Yadav's guide on dataset augmentation, which helps to prevent overfitting on the small dataset provided, and helps generalise the model to many different angles. In addition to Dr. Yadav's tilting/shearing procedure, I did brightness variation, which helped to further generalise the dataset provided to many different lighting conditions.
-<br>
-My data augmentation is performed in my training routine, as it allows for fine grain control over the amount of change to the dataset at different stages in the training procedure. I gradually reduce the augmented dataset as training progresses, in order to allow the model to learn the more subtle features of the dataset.
-</font> 
-
-### Question 2
-
-_Describe how you set up the training, validation and testing data for your model. **Optional**: If you generated additional data, how did you generate the data? Why did you generate the data? What are the differences in the new dataset (with generated data) from the original dataset?_
-
-**Answer:**
-
-<font color='red'>
-I split my data into training, testing and validation sets.  As described above, I generated additional data within the train procedure itself.  The additional data consists of basic transformations of the training data, varying the rotation, translation and brightness in the images, in order to make the model more robust towards these changes. <br><br>
-Augmenting the dataset reinforces the notion that the actual features of the traffic signs matter and not the conditions under which they were taken.  We hope that the model becomes invariant to the conditions in which the image is taken.
-</font> 
-
-### Question 3
-
-_What does your final architecture look like? (Type of model, layers, sizes, connectivity, etc.)  For reference on how to build a deep neural network using TensorFlow, see [Deep Neural Network in TensorFlow
-](https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/6df7ae49-c61c-4bb2-a23e-6527e69209ec/lessons/b516a270-8600-4f93-a0a3-20dfeabe5da6/concepts/83a3a2a2-a9bd-4b7b-95b0-eb924ab14432) from the classroom._
-
-
-**Answer:**
-
-<font color='red'>
-I started with a simple convolutional neural network, based on Alexnet. It consists of 3 3x3 convolution layers (of sizes 32, 64 and 128 respectively), each with an elu activation function. The convolution layers are each fed into a 3x3 max pooling layer, followed by normalisation and dropout.  The final convolutional layer is flattened into a fully connected layer, which is followed by another fully connected layer, from which we then gather the output values.  These are then converted to class predictions using a standard sigmoid function.  Overall, a standard convolutional model.
-<br><br>
-I then read through and tried to mimick the network proposed by Yann LeCun in the paper referenced above.  He describes a very simple 2-layer convolutional neural network submitted by the Sermanet team in the traffic sign classification competition. This conv-net consists of two convolutional layers, of size 108 each, both feeding into a single fully-connected layer of size 100.  I mimicked this approach above (Sermanet model).
-<br><br>
-I then tried to ensemble these conv-nets, which proved to yield better results than each conv-net on its own.  (See the 'ensemble_classify' method for the implementation).
-</font> 
-
-
-```python
-network_architecture_img = Image.open("./TrafficNet.png")
-plt.figure(figsize=(20,10))
-plt.imshow(network_architecture_img)
-plt.axis('off')
-plt.show();
-```
-
-
-![png](output_48_0.png)
-
-
-### Question 4
-
-_How did you train your model? (Type of optimizer, batch size, epochs, hyperparameters, etc.)_
-
-
-**Answer:**
-
-<font color='red'>
-For training the model, I used the well known and loved Adam Optimizer with a learning rate of 0.001, set to minimize the cross entropy between the actual labels and the predicted labels.  My training data is split into 40 batches of 980 images each. 50 epochs seems to be more than enough to train this specific model on the training data provided.
-<br><br>
-I evaluated my model using both an accuracy figure (which indicates the amount of labels predicted correctly), as well as the cross-entropy figure - which indicates to what extent the model was "sure" about the predicted label (and whether it got it right).
-<br><br>
-As mentioned before, I augmented the training dataset, and gradually reduced the augmentation as training progressed - which allows the conv-net to learn the more subtle features of the (very low resolution) images.
-</font> 
-
-### Question 5
-
-
-_What approach did you take in coming up with a solution to this problem? It may have been a process of trial and error, in which case, outline the steps you took to get to the final solution and why you chose those steps. Perhaps your solution involved an already well known implementation or architecture. In this case, discuss why you think this is suitable for the current problem._
-
-**Answer:**
-
-<font color='red'>
-I started out by trying to fully understand how convolutional neural networks operate. I also worked through a few tutorials on building convnets.  I then chose a base architecture - AlexNet in this case - and started to experiment with converting it to fit my traffic sign problem.
-<br><br>
-After having built, trained and tested a functional AlexNet model, I started looking to literature for a better performing architecture that I could implement to improve my validation results. I implemented a simplified version of the Sermanet team's convolutional neural network explained by Yann LeCun in his paper on the Traffic Sign Classifier project solutions (http://yann.lecun.com/exdb/publis/pdf/sermanet-ijcnn-11.pdf).
-<br><br>
-I used this model to ensemble my own (I had gotten rather attached to my little AlexNet model, and I didn't just want to discard it in favour of a better model). The idea being that the Sermanet-clone would function on grayscale images, while the AlexNet would work with color images, allowing the ensemble to use color information without overfitting on it.
-</font> 
-
 ---
 
 ## Step 3: Test a Model on New Images
 
-Take several pictures of traffic signs that you find on the web or around you (at least five), and run them through your classifier on your computer to produce example results. The classifier might not recognize some local signs but it could prove interesting nonetheless.
-
-You may find `signnames.csv` useful as it contains mappings from the class id (integer) to the actual sign name.
 
 ### Implementation
 
-Use the code cell (or multiple code cells, if necessary) to implement the first step of your project. Once you have completed your implementation and are satisfied with the results, be sure to thoroughly answer the questions that follow.
 
-<font color='red'>
 <strong>
 The images below were fetched from a streetView drive around the Maximilaneum in Munich, and around the Breitscheidplatz in Berlin:
 </strong>
-</font> 
+
 
 
 ```python
@@ -878,11 +731,7 @@ interact(show_sign_at_index, i=(0,len(streetview_classifications)-1), classifica
 ![png](output_59_2.png)
 
 
-### Question 6
-
-_Choose five candidate images of traffic signs and provide them in the report. Are there any particular qualities of the image(s) that might make classification difficult? It could be helpful to plot the images in the notebook._
-
-
+### Misclassifications
 
 **Answer:**
 
@@ -1052,70 +901,9 @@ with tf.Session(graph = g2) as sess:
     ALEXNET prediction:  Traffic signals
 
 
-### Question 7
-
-_Is your model able to perform equally well on captured pictures when compared to testing on the dataset? The simplest way to do this check the accuracy of the predictions. For example, if the model predicted 1 out of 5 signs correctly, it's 20% accurate._
-
-_**NOTE:** You could check the accuracy manually by using `signnames.csv` (same directory). This file has a mapping from the class id (0-42) to the corresponding sign name. So, you could take the class id the model outputs, lookup the name in `signnames.csv` and see if it matches the sign from the image._
-
-
-**Answer:**
-
-<font color='red'>
 One would expect the model to perform slightly worse on the new images than those from the set it was trained on, simply because it's an entirely different datasource taken with a different camera, and from entirely different angles (My candidate images were taken from Google StreetView, which means the camera was mounted on top of the car, and we would expect the images to be much more distorted than those from a front-mounted, standard camera).
 <br><br>
 However, the model performed well and seems to have learned the features of the traffic signs (and not the subtle condition differences), which is great.  I validated this by also using a standard online sign dataset (which contains no distortion and no "outside effects") and still the model performed well, correctly classifying each of the images. This tells us that the model was able to capture the features of the traffic signs and not overfit (too severely) to the data it was trained with.
 <br><br>
 Overall, the model achieved 18/20 correct predictions on the captured pictures, which translates to 90% accuracy which is slightly lower than the dataset trained on (~96%).
-</font> 
 
-### Question 8
-
-*Use the model's softmax probabilities to visualize the **certainty** of its predictions, [`tf.nn.top_k`](https://www.tensorflow.org/versions/r0.12/api_docs/python/nn.html#top_k) could prove helpful here. Which predictions is the model certain of? Uncertain? If the model was incorrect in its initial prediction, does the correct prediction appear in the top k? (k should be 5 at most)*
-
-`tf.nn.top_k` will return the values and indices (class ids) of the top k predictions. So if k=3, for each sign, it'll return the 3 largest probabilities (out of a possible 43) and the correspoding class ids.
-
-Take this numpy array as an example:
-
-```
-# (5, 6) array
-a = np.array([[ 0.24879643,  0.07032244,  0.12641572,  0.34763842,  0.07893497,
-         0.12789202],
-       [ 0.28086119,  0.27569815,  0.08594638,  0.0178669 ,  0.18063401,
-         0.15899337],
-       [ 0.26076848,  0.23664738,  0.08020603,  0.07001922,  0.1134371 ,
-         0.23892179],
-       [ 0.11943333,  0.29198961,  0.02605103,  0.26234032,  0.1351348 ,
-         0.16505091],
-       [ 0.09561176,  0.34396535,  0.0643941 ,  0.16240774,  0.24206137,
-         0.09155967]])
-```
-
-Running it through `sess.run(tf.nn.top_k(tf.constant(a), k=3))` produces:
-
-```
-TopKV2(values=array([[ 0.34763842,  0.24879643,  0.12789202],
-       [ 0.28086119,  0.27569815,  0.18063401],
-       [ 0.26076848,  0.23892179,  0.23664738],
-       [ 0.29198961,  0.26234032,  0.16505091],
-       [ 0.34396535,  0.24206137,  0.16240774]]), indices=array([[3, 0, 5],
-       [0, 1, 4],
-       [0, 5, 1],
-       [1, 3, 5],
-       [1, 4, 3]], dtype=int32))
-```
-
-Looking just at the first row we get `[ 0.34763842,  0.24879643,  0.12789202]`, you can confirm these are the 3 largest probabilities in `a`. You'll also notice `[3, 0, 5]` are the corresponding indices.
-
-**Answer:**
-
-<font color='red'>
-The model seems to be very confident about the top 1 class, even when it's classified incorrectly - which is slightly worrying.  We would want the model to be less certain of the incorrect classes and at least attach some probability to the correct class.  In those instances where the model classified the sign incorrectly, the sign did appear in the top 5 classifications - for the most part.
-<br>
-Further work on this model should be to try and further reduce overfitting (and learn more sign features), in order to see a more "normally spread" probability distribution over images that are very hard to classify.
-<br><br>
-See question 6 for a more thorough analysis of a few selected top-5 predictions.
-</font> 
-
-> **Note**: Once you have completed all of the code implementations and successfully answered each question above, you may finalize your work by exporting the iPython Notebook as an HTML document. You can do this by using the menu above and navigating to  \n",
-    "**File -> Download as -> HTML (.html)**. Include the finished document along with this notebook as your submission.
