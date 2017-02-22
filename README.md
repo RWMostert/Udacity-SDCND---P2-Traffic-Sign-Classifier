@@ -3,7 +3,7 @@
 
 ## Deep Learning
 
-## Project: Build a Traffic Sign Recognition Classifier
+### Project: Build a Traffic Sign Recognition Classifier
 
 ## Step 1: Dataset Summary & Exploration
 
@@ -16,24 +16,6 @@ The csv file from the dataset contains a dictionary with 4 key/value pairs:
 - `'sizes'` is a list containing tuples, (width, height) representing the the original width and height the image.
 - `'coords'` is a list containing tuples, (x1, y1, x2, y2) representing coordinates of a bounding box around the sign in the image. 
 
-```python
-# Number of training examples
-n_train = len(X_train)
-
-# Number of testing examples.
-n_test = len(X_test)
-
-# What's the shape of an traffic sign image?
-image_shape = X_test[58].shape
-
-# How many unique classes/labels there are in the dataset.
-n_classes = len(np.unique(y_train))
-
-print("Number of training examples =", n_train)
-print("Number of testing examples =", n_test)
-print("Image data shape =", image_shape)
-print("Number of classes =", n_classes)
-```
 
     Number of training examples = 39209
     Number of testing examples = 12630
@@ -45,28 +27,6 @@ We see that the dataset is a list of images (traffic signs), with a list of thei
 
 First, let's take a look at some of the images and what their labels look like:
 
-```python
-
-sign_names = {}
-with open('signnames.csv') as csvfile:
-    reader = csv.reader(csvfile)
-    for row in reader:
-         sign_names[row[0]] = row[1]
-
-def show_sign_at_index(i, images, classifications):
-    img = images[i]
-    sign_prediction = classifications[i]
-    print(str(sign_prediction) + ":  " + sign_names[str(sign_prediction)])
-    plt.axis('off')
-    plt.imshow(img)
-    plt.show();
-    print(img.shape)
-```
-
-
-```python
-interact(show_sign_at_index, i=(0,len(X_train)), classifications=fixed(y_train), images = fixed(X_train));
-```
 
     12:  Priority road
 
@@ -663,40 +623,6 @@ The images below were fetched from a streetView drive around the Maximilaneum in
 </strong>
 
 
-
-```python
-raw_images =[Image.open("./Breitscheidplatz/sign1.png"), \
-            Image.open("./Breitscheidplatz/sign2.png"),  \
-            Image.open("./Breitscheidplatz/sign3.png"),  \
-            Image.open("./Breitscheidplatz/sign4.png"),  \
-            Image.open("./Breitscheidplatz/sign6.png"),  \
-            Image.open("./Breitscheidplatz/sign7.png"),  \
-            Image.open("./Breitscheidplatz/sign8.png"),  \
-            Image.open("./Breitscheidplatz/sign9.png"),  \
-            Image.open("./Maximilaneum/sign1.png"),      \
-            Image.open("./Maximilaneum/sign2.png"),      \
-            Image.open("./Maximilaneum/sign3.png"),      \
-            Image.open("./Maximilaneum/sign4.png"),      \
-            Image.open("./Maximilaneum/sign5.png"),      \
-            Image.open("./Maximilaneum/sign7.png"),      \
-            Image.open("./Maximilaneum/sign8.png"),      \
-            Image.open("./Maximilaneum/sign9.png"),      \
-            Image.open("./Maximilaneum/sign10.png"),     \
-            Image.open("./Maximilaneum/sign11.png"),     \
-            Image.open("./Maximilaneum/sign12.png"),     \
-            Image.open("./Maximilaneum/sign13.png"),     \
-            Image.open("./Maximilaneum/sign14.png")]
-
-maximilaneum_signs = []
-streetview_signs = []
-
-for image in raw_images:
-    streetview_signs.append(np.asarray(ImageOps.fit(image, (32,32), Image.ANTIALIAS)))
-
-streetview_classifications = ensemble_classify(streetview_signs)
-```
-
-
 ```python
 def show_sign_at_index(i, images, classifications):
     img = images[i]
@@ -733,8 +659,6 @@ interact(show_sign_at_index, i=(0,len(streetview_classifications)-1), classifica
 
 ### Misclassifications
 
-**Answer:**
-
 ## <font color='red'> #1: Misclassification: "Children Crossing" classified as "Road Work"
 </font>
 
@@ -743,12 +667,6 @@ The image below was classified as "Road work", rather than "Children Crossing". 
 <br>
 What's encouraging though, is that the network clearly indicates that it is uncertain, giving the classification a p-value below 0.5. In practice we might reject classifications with low p-values, try grab another image from the video and try to classify the image again.
 </font>
-
-
-```python
-show_sign_at_index(15, classifications=streetview_classifications, images=streetview_signs)
-```
-
 
 ![png](output_64_0.png)
 
@@ -772,11 +690,6 @@ The 60km/h speed limit sign below, however classified correctly, reveals a lot a
 </font>
 
 
-```python
-show_sign_at_index(16, classifications=streetview_classifications, images=streetview_signs)
-```
-
-
 ![png](output_67_0.png)
 
 
@@ -796,11 +709,6 @@ show_sign_at_index(16, classifications=streetview_classifications, images=street
 
 <font color='red'>Something to note with the classification below, is the top 5 classifications.  It's encouraging to see that the "no passing" sign (which is visually similar to the "no passing for vehicles over 3.5 metric tonnes" sign) was it's second choice.
 </font>
-
-
-```python
-show_sign_at_index(17, classifications=streetview_classifications, images=streetview_signs)
-```
 
 
 ![png](output_70_0.png)
@@ -825,11 +733,6 @@ The classifier was rather uncertain about the classification below as a double c
 </font>
 
 
-```python
-show_sign_at_index(18, classifications=streetview_classifications, images=streetview_signs)
-```
-
-
 ![png](output_73_0.png)
 
 
@@ -852,10 +755,6 @@ In earlier models, the sign below was constantly classified as a general caution
 Reducing augmentation at later training stages (using the reduction_coefficient variable), helped SermaNet learn the more subtle differences between a traffic sign and a general caution sign, even with lack of color. It still assigns some probability to the sign being a general caution sign though - and rightly so, since they are visually similar when color is disregarded.
 </font>
 
-
-```python
-show_sign_at_index(20, classifications=streetview_classifications, images=streetview_signs)
-```
 
 
 ![png](output_76_0.png)
